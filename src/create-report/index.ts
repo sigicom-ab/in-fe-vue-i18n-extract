@@ -4,6 +4,7 @@ import { readVueFiles, extractI18NItemsFromVueFiles } from './vue-files';
 import { readLanguageFiles, extractI18NLanguageFromLanguageFiles, removeUnusedFromLanguageFiles, writeMissingToLanguageFiles } from './language-files';
 import { extractI18NReport,  writeReportToFile } from './report';
 import Dot from 'dot-object';
+import { SimpleFile } from '../types';
 
 export async function createI18NReport (options: ReportOptions): Promise<I18NReport> {
   const {
@@ -16,19 +17,27 @@ export async function createI18NReport (options: ReportOptions): Promise<I18NRep
     ci,
     separator,
     noEmptyTranslation = '',
+    ignoreUnusedKeys = false,
+    ignoreDynamicKeys = false
   } = options;
 
-  if (!vueFilesGlob) throw new Error('Required configuration vueFiles is missing.');
+  if (!vueFilesGlob || !vueFilesGlob.length) throw new Error('Required configuration vueFiles is missing.');
   if (!languageFilesGlob) throw new Error('Required configuration languageFiles is missing.');
 
   const dot = typeof separator === 'string' ? new Dot(separator) : Dot;
-  const vueFiles = readVueFiles(path.resolve(process.cwd(), vueFilesGlob));
+
+  const vueFiles = vueFilesGlob.reduce<SimpleFile[]>((res, file_path) => {
+    const files = readVueFiles(path.resolve(process.cwd(), file_path));
+
+    return [...res, ...files];
+  }, []);
+
   const languageFiles = readLanguageFiles(path.resolve(process.cwd(), languageFilesGlob));
 
   const I18NItems = extractI18NItemsFromVueFiles(vueFiles);
   const I18NLanguage = extractI18NLanguageFromLanguageFiles(languageFiles, dot);
 
-  const report = extractI18NReport(I18NItems, I18NLanguage);
+  const report = extractI18NReport(I18NItems, I18NLanguage, ignoreDynamicKeys);
 
   report.unusedKeys = report.unusedKeys.filter(key =>
       !exclude.filter(excluded => key.path.startsWith(excluded)).length)
@@ -56,7 +65,7 @@ export async function createI18NReport (options: ReportOptions): Promise<I18NRep
     throw new Error(`${report.missingKeys.length} missing keys found.`);
   }
 
-  if (ci && report.unusedKeys.length) {
+  if (ci && report.unusedKeys.length && !ignoreUnusedKeys) {
     throw new Error(`${report.unusedKeys.length} unused keys found.`);
   }
 

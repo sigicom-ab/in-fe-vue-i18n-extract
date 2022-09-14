@@ -7,7 +7,7 @@ import Dot from 'dot-object';
 import yaml from 'js-yaml';
 
 function _extends() {
-  _extends = Object.assign || function (target) {
+  _extends = Object.assign ? Object.assign.bind() : function (target) {
     for (var i = 1; i < arguments.length; i++) {
       var source = arguments[i];
 
@@ -20,13 +20,12 @@ function _extends() {
 
     return target;
   };
-
   return _extends.apply(this, arguments);
 }
 
 var defaultConfig = {
   // Options documented in vue-i18n-extract readme.
-  vueFiles: './src/**/*.?(js|vue)',
+  vueFiles: ['./src/**/*.?(js|vue)'],
   languageFiles: './lang/**/*.?(json|yaml|yml|js)',
   exclude: [],
   output: false,
@@ -57,6 +56,7 @@ function resolveConfig() {
     options = argvOptions;
   }
 
+  options.vueFiles = Array.isArray(options.vueFiles) ? options.vueFiles : options.vueFiles ? [options.vueFiles] : undefined;
   options.exclude = Array.isArray(options.exclude) ? options.exclude : [options.exclude];
   return options;
 }
@@ -275,10 +275,11 @@ function stripBounding(item) {
 
 function mightBeDynamic(item) {
   return item.path.includes('${') && !!item.previousCharacter.match(/`/g) && !!item.nextCharacter.match(/`/g);
-} // Looping through the arays multiple times might not be the most effecient, but it's the easiest to read and debug. Which at this scale is an accepted trade-off.
+}
 
+const dynamicKeyRegEx = /\w+\.\w+/; // Looping through the arays multiple times might not be the most effecient, but it's the easiest to read and debug. Which at this scale is an accepted trade-off.
 
-function extractI18NReport(vueItems, languageFiles) {
+function extractI18NReport(vueItems, languageFiles, ignoreDynamicKeys = false) {
   const missingKeys = [];
   const unusedKeys = [];
   const maybeDynamicKeys = vueItems.filter(vueItem => mightBeDynamic(vueItem)).map(vueItem => stripBounding(vueItem));
@@ -287,7 +288,7 @@ function extractI18NReport(vueItems, languageFiles) {
     const missingKeysInLanguage = vueItems.filter(vueItem => !mightBeDynamic(vueItem)).filter(vueItem => !languageItems.some(languageItem => vueItem.path === languageItem.path)).map(vueItem => _extends({}, stripBounding(vueItem), {
       language
     }));
-    const unusedKeysInLanguage = languageItems.filter(languageItem => !vueItems.some(vueItem => languageItem.path === vueItem.path || languageItem.path.startsWith(vueItem.path + '.'))).map(languageItem => _extends({}, languageItem, {
+    const unusedKeysInLanguage = languageItems.filter(languageItem => !vueItems.some(vueItem => languageItem.path === vueItem.path || languageItem.path.startsWith(vueItem.path + '.') || ignoreDynamicKeys && languageItem.path.match(dynamicKeyRegEx))).map(languageItem => _extends({}, languageItem, {
       language
     }));
     missingKeys.push(...missingKeysInLanguage);
@@ -323,16 +324,21 @@ async function createI18NReport(options) {
     exclude = [],
     ci,
     separator,
-    noEmptyTranslation = ''
+    noEmptyTranslation = '',
+    ignoreUnusedKeys = false,
+    ignoreDynamicKeys = false
   } = options;
-  if (!vueFilesGlob) throw new Error('Required configuration vueFiles is missing.');
+  if (!vueFilesGlob || !vueFilesGlob.length) throw new Error('Required configuration vueFiles is missing.');
   if (!languageFilesGlob) throw new Error('Required configuration languageFiles is missing.');
   const dot = typeof separator === 'string' ? new Dot(separator) : Dot;
-  const vueFiles = readVueFiles(path.resolve(process.cwd(), vueFilesGlob));
+  const vueFiles = vueFilesGlob.reduce((res, file_path) => {
+    const files = readVueFiles(path.resolve(process.cwd(), file_path));
+    return [...res, ...files];
+  }, []);
   const languageFiles = readLanguageFiles(path.resolve(process.cwd(), languageFilesGlob));
   const I18NItems = extractI18NItemsFromVueFiles(vueFiles);
   const I18NLanguage = extractI18NLanguageFromLanguageFiles(languageFiles, dot);
-  const report = extractI18NReport(I18NItems, I18NLanguage);
+  const report = extractI18NReport(I18NItems, I18NLanguage, ignoreDynamicKeys);
   report.unusedKeys = report.unusedKeys.filter(key => !exclude.filter(excluded => key.path.startsWith(excluded)).length);
   if (report.missingKeys.length) console.info('\nMissing Keys'), console.table(report.missingKeys);
   if (report.unusedKeys.length) console.info('\nUnused Keys'), console.table(report.unusedKeys);
@@ -357,7 +363,7 @@ async function createI18NReport(options) {
     throw new Error(`${report.missingKeys.length} missing keys found.`);
   }
 
-  if (ci && report.unusedKeys.length) {
+  if (ci && report.unusedKeys.length && !ignoreUnusedKeys) {
     throw new Error(`${report.unusedKeys.length} unused keys found.`);
   }
 

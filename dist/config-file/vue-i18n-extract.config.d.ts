@@ -1,5 +1,5 @@
 declare const _default: {
-    vueFiles: string;
+    vueFiles: string[];
     languageFiles: string;
     exclude: never[];
     output: boolean;

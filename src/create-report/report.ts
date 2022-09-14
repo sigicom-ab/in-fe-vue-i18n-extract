@@ -13,8 +13,10 @@ function mightBeDynamic (item: I18NItemWithBounding): boolean {
   return item.path.includes('${') && !!item.previousCharacter.match(/`/g) && !!item.nextCharacter.match(/`/g);
 }
 
+const dynamicKeyRegEx = /\w+\.\w+/;
+
 // Looping through the arays multiple times might not be the most effecient, but it's the easiest to read and debug. Which at this scale is an accepted trade-off.
-export function extractI18NReport (vueItems: I18NItemWithBounding[], languageFiles: I18NLanguage): I18NReport {
+export function extractI18NReport (vueItems: I18NItemWithBounding[], languageFiles: I18NLanguage, ignoreDynamicKeys = false): I18NReport {
   const missingKeys: I18NItem[] = [];
   const unusedKeys: I18NItem[] = [];
 
@@ -31,7 +33,11 @@ export function extractI18NReport (vueItems: I18NItemWithBounding[], languageFil
       .map(vueItem => ({ ...stripBounding(vueItem), language }));
 
     const unusedKeysInLanguage = languageItems
-      .filter(languageItem => !vueItems.some(vueItem => languageItem.path === vueItem.path || languageItem.path.startsWith(vueItem.path + '.')))
+      .filter(languageItem => !vueItems.some(vueItem =>
+        languageItem.path === vueItem.path ||
+        languageItem.path.startsWith(vueItem.path + '.') ||
+        (ignoreDynamicKeys && languageItem.path.match(dynamicKeyRegEx))
+      ))
       .map(languageItem => ({ ...languageItem, language }));
 
     missingKeys.push(...missingKeysInLanguage);

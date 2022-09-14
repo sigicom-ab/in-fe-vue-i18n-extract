@@ -13,27 +13,9 @@
   var Dot__default = /*#__PURE__*/_interopDefaultLegacy(Dot);
   var yaml__default = /*#__PURE__*/_interopDefaultLegacy(yaml);
 
-  function _extends() {
-    _extends = Object.assign || function (target) {
-      for (var i = 1; i < arguments.length; i++) {
-        var source = arguments[i];
-
-        for (var key in source) {
-          if (Object.prototype.hasOwnProperty.call(source, key)) {
-            target[key] = source[key];
-          }
-        }
-      }
-
-      return target;
-    };
-
-    return _extends.apply(this, arguments);
-  }
-
   var defaultConfig = {
     // Options documented in vue-i18n-extract readme.
-    vueFiles: './src/**/*.?(js|vue)',
+    vueFiles: ['./src/**/*.?(js|vue)'],
     languageFiles: './lang/**/*.?(json|yaml|yml|js)',
     exclude: [],
     output: false,
@@ -59,11 +41,14 @@
       const configOptions = require(pathToConfigFile);
 
       console.info(`\nUsing config file found at ${pathToConfigFile}`);
-      options = _extends({}, configOptions, argvOptions);
-    } catch (_unused) {
+      options = { ...configOptions,
+        ...argvOptions
+      };
+    } catch {
       options = argvOptions;
     }
 
+    options.vueFiles = Array.isArray(options.vueFiles) ? options.vueFiles : options.vueFiles ? [options.vueFiles] : undefined;
     options.exclude = Array.isArray(options.exclude) ? options.exclude : [options.exclude];
     return options;
   }
@@ -282,19 +267,20 @@
 
   function mightBeDynamic(item) {
     return item.path.includes('${') && !!item.previousCharacter.match(/`/g) && !!item.nextCharacter.match(/`/g);
-  } // Looping through the arays multiple times might not be the most effecient, but it's the easiest to read and debug. Which at this scale is an accepted trade-off.
+  }
 
+  const dynamicKeyRegEx = /\w+\.\w+/; // Looping through the arays multiple times might not be the most effecient, but it's the easiest to read and debug. Which at this scale is an accepted trade-off.
 
-  function extractI18NReport(vueItems, languageFiles) {
+  function extractI18NReport(vueItems, languageFiles, ignoreDynamicKeys = false) {
     const missingKeys = [];
     const unusedKeys = [];
     const maybeDynamicKeys = vueItems.filter(vueItem => mightBeDynamic(vueItem)).map(vueItem => stripBounding(vueItem));
     Object.keys(languageFiles).forEach(language => {
       const languageItems = languageFiles[language];
-      const missingKeysInLanguage = vueItems.filter(vueItem => !mightBeDynamic(vueItem)).filter(vueItem => !languageItems.some(languageItem => vueItem.path === languageItem.path)).map(vueItem => _extends({}, stripBounding(vueItem), {
+      const missingKeysInLanguage = vueItems.filter(vueItem => !mightBeDynamic(vueItem)).filter(vueItem => !languageItems.some(languageItem => vueItem.path === languageItem.path)).map(vueItem => ({ ...stripBounding(vueItem),
         language
       }));
-      const unusedKeysInLanguage = languageItems.filter(languageItem => !vueItems.some(vueItem => languageItem.path === vueItem.path || languageItem.path.startsWith(vueItem.path + '.'))).map(languageItem => _extends({}, languageItem, {
+      const unusedKeysInLanguage = languageItems.filter(languageItem => !vueItems.some(vueItem => languageItem.path === vueItem.path || languageItem.path.startsWith(vueItem.path + '.') || ignoreDynamicKeys && languageItem.path.match(dynamicKeyRegEx))).map(languageItem => ({ ...languageItem,
         language
       }));
       missingKeys.push(...missingKeysInLanguage);
@@ -330,16 +316,21 @@
       exclude = [],
       ci,
       separator,
-      noEmptyTranslation = ''
+      noEmptyTranslation = '',
+      ignoreUnusedKeys = false,
+      ignoreDynamicKeys = false
     } = options;
-    if (!vueFilesGlob) throw new Error('Required configuration vueFiles is missing.');
+    if (!vueFilesGlob || !vueFilesGlob.length) throw new Error('Required configuration vueFiles is missing.');
     if (!languageFilesGlob) throw new Error('Required configuration languageFiles is missing.');
     const dot = typeof separator === 'string' ? new Dot__default["default"](separator) : Dot__default["default"];
-    const vueFiles = readVueFiles(path__default["default"].resolve(process.cwd(), vueFilesGlob));
+    const vueFiles = vueFilesGlob.reduce((res, file_path) => {
+      const files = readVueFiles(path__default["default"].resolve(process.cwd(), file_path));
+      return [...res, ...files];
+    }, []);
     const languageFiles = readLanguageFiles(path__default["default"].resolve(process.cwd(), languageFilesGlob));
     const I18NItems = extractI18NItemsFromVueFiles(vueFiles);
     const I18NLanguage = extractI18NLanguageFromLanguageFiles(languageFiles, dot);
-    const report = extractI18NReport(I18NItems, I18NLanguage);
+    const report = extractI18NReport(I18NItems, I18NLanguage, ignoreDynamicKeys);
     report.unusedKeys = report.unusedKeys.filter(key => !exclude.filter(excluded => key.path.startsWith(excluded)).length);
     if (report.missingKeys.length) console.info('\nMissing Keys'), console.table(report.missingKeys);
     if (report.unusedKeys.length) console.info('\nUnused Keys'), console.table(report.unusedKeys);
@@ -364,7 +355,7 @@
       throw new Error(`${report.missingKeys.length} missing keys found.`);
     }
 
-    if (ci && report.unusedKeys.length) {
+    if (ci && report.unusedKeys.length && !ignoreUnusedKeys) {
       throw new Error(`${report.unusedKeys.length} unused keys found.`);
     }
 

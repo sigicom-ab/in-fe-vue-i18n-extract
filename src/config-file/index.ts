@@ -30,6 +30,7 @@ export function resolveConfig (): Record<string, string>  {
     options = argvOptions;
   }
 
+  options.vueFiles = Array.isArray(options.vueFiles) ? options.vueFiles : options.vueFiles ? [ options.vueFiles ] : undefined;
   options.exclude = Array.isArray(options.exclude) ? options.exclude : [options.exclude];
 
   return options;

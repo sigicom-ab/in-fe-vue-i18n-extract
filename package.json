@@ -1,7 +1,7 @@
 {
-  "name": "vue-i18n-extract",
+  "name": "@sigicom/vue-i18n-extract",
   "description": "Manage vue-i18n localization with static analysis",
-  "version": "2.0.8",
+  "version": "2.1.0",
   "scripts": {
     "build": "rm -fr dist && microbundle --target node -f umd,modern",
     "dev": "microbundle watch --target node",
@@ -18,9 +18,7 @@
   "main": "dist/vue-i18n-extract.umd.js",
   "module": "dist/vue-i18n-extract.modern.js",
   "types": "dist/index.d.ts",
-  "repository": "https://github.com/Spittal/vue-i18n-extract",
-  "homepage": "https://github.com/Spittal/vue-i18n-extract",
-  "bugs": "https://github.com/Spittal/vue-i18n-extract/issues",
+  "repository": "https://github.com/sigicom-ab/in-fe-vue-i18n-extract",
   "keywords": [
     "javascript",
     "typescript",
@@ -31,6 +29,9 @@
     "internationalization-plugin"
   ],
   "author": "Jamie Spittal <jamie@jamiespittal.com>",
+  "contributors": [
+    "Alexey Stryi <alexey@ibissoft.se>"
+  ],
   "dependencies": {
     "cac": "^6.7.12",
     "dot-object": "^2.1.4",

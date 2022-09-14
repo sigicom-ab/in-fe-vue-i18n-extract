@@ -43,6 +43,14 @@ cli
     '--noEmptyTranslation',
     'Use if you want to generate a default translated string by using the key itself'
    )
+   .option(
+    '--ignoreUnusedKeys',
+    'Use if you want to skip reporting unused keys list in CI mode'
+   )
+   .option(
+    '--ignoreDynamicKeys',
+    'Use if you want to skip reporting dynamic keys list'
+   )
   .action((options) => {
     createI18NReport(resolveConfig(options));
   });

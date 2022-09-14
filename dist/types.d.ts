@@ -1,5 +1,5 @@
 export declare type ReportOptions = {
-    vueFiles: string;
+    vueFiles: string[];
     languageFiles: string;
     output?: string;
     exclude?: string[];
@@ -8,6 +8,8 @@ export declare type ReportOptions = {
     ci?: boolean;
     separator?: string;
     noEmptyTranslation?: string;
+    ignoreUnusedKeys?: boolean;
+    ignoreDynamicKeys?: boolean;
 };
 export declare type SimpleFile = {
     fileName: string;

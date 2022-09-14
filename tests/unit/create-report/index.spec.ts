@@ -15,7 +15,7 @@ describe('file: create-report/index', () => {
 
   beforeEach(() => {
     options = {
-      vueFiles,
+      vueFiles : [ vueFiles ],
       languageFiles,
     }
 

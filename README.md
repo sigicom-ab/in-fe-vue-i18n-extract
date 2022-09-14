@@ -1,5 +1,5 @@
 <h1 align="center">
-  <a href="https://github.com/Spittal/vue-i18n-extract"><img align="center" width="70%"src=".github/img/vue-18n-extract-logo.png" alt="vue-i18n-logo"></a>
+  <a href="https://github.com/Spittal/vue-i18n-extract">Vue I18n extract</a>
 </h1>
 
 <p align="center">
@@ -107,8 +107,8 @@ You can generate a default configuration file using `npx vue-i18n-extract init` 
 * Name: `vueFiles`
 * CLI argument: `--vue-files`, `--vueFiles`
 * Required: Yes
-* Type: `string`
-* Description: A path to the directory of files from which you want to extract translation keys from. Can be a path to a file. Can include glob patterns (using [glob](https://www.npmjs.com/package/glob)). **Note for Windows users**: use forward slashes in paths.
+* Type: `string` or array of `string`s
+* Description: A path to the directory of files from which you want to extract translation keys from. Can be a path to a file. Can include glob patterns (using [glob](https://www.npmjs.com/package/glob)). It can be used multiple times to process several directories at the same time. **Note for Windows users**: use forward slashes in paths.
 * Examples:
   * `./path/to/source-files/**/*.?(js|vue)`
   * `./tests/fixtures/**/*.?(vue|js)`
@@ -195,6 +195,24 @@ You can generate a default configuration file using `npx vue-i18n-extract init` 
   * `'*'`: Generate empty default translation for all locales.
   * `'en'`: Generate empty default translation for locale `'en'`.
   * `'en-US'`: Generate empty default translation for locale `'en-US'`.
+
+### `ignoreUnusedKeys`
+
+* Name: `ignoreUnusedKeys`
+* CLI argument: `--ignore-unused-keys`, `--ignoreUnusedKeys`
+* Required: No
+* Default: `false`
+* Type: `boolean`
+* Description: Prevents script to exit with `code 1` in CI mode in case there are unused keys.
+
+### `ignoreDynamicKeys`
+
+* Name: `ignoreDynamicKeys`
+* CLI argument: `--ignore-dynamic-keys`, `--ignoreDynamicKeys`
+* Required: No
+* Default: `false`
+* Type: `boolean`
+* Description: Excludes keys that are considered to be dynamic from the list of unused keys.
 
 ## Supported `vue-i18n` Formats
 
